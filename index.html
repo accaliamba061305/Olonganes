@@ -1,10 +1,380 @@
 <!DOCTYPE html>
-<html>
+<html lang="vi">
 <head>
-  <meta charset="utf-8">
-  <title>My Site</title>
+  <meta charset="UTF-8" />
+  <title>Olonganes — Quốc gia tưởng tượng</title>
+  <style>
+    :root {
+      --bg: white;
+      --text: black;
+      --font-size: 16px;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      font-size: var(--font-size);
+    }
+
+    header {
+      padding: 16px 20px;
+      border-bottom: 1px solid #888;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .header-right {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    h1, h2, h3 {
+      margin: 8px 0;
+    }
+
+    .container {
+      padding: 20px;
+      max-width: 900px;
+    }
+
+    .field {
+      margin: 12px 0;
+      padding: 12px;
+      border: 1px solid #888;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    .subfield {
+      margin: 8px 0 8px 16px;
+      padding: 8px;
+      border-left: 3px solid #888;
+      cursor: pointer;
+    }
+
+    button, select {
+      padding: 6px 10px;
+      margin: 4px;
+      border-radius: 6px;
+      border: 1px solid #666;
+      background: transparent;
+      color: var(--text);
+      cursor: pointer;
+      font-size: 1em;
+    }
+
+    input[type="search"] {
+      padding: 6px 10px;
+      border-radius: 6px;
+      border: 1px solid #666;
+      background: transparent;
+      color: var(--text);
+      font-size: 1em;
+    }
+
+    #breadcrumb {
+      font-size: 0.9em;
+      opacity: 0.8;
+      margin-bottom: 10px;
+    }
+
+    #backBtn {
+      margin-bottom: 10px;
+    }
+
+    /* SETTINGS PANEL */
+    #settingsBtn {
+      /* moved into header, no longer fixed */
+    }
+
+    #settingsPanel {
+      position: fixed;
+      top: 0;
+      right: -320px;
+      width: 300px;
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      border-left: 1px solid #888;
+      padding: 16px;
+      transition: right 0.25s;
+      overflow-y: auto;
+    }
+
+    #settingsPanel.open {
+      right: 0;
+    }
+
+    .setting-group {
+      margin-bottom: 20px;
+    }
+  </style>
 </head>
 <body>
-  <h1>Hello world</h1>
+
+<button id="settingsBtn">⚙ Settings</button>
+
+<div id="settingsPanel">
+  <h2 id="set_title">Settings</h2>
+
+  <div class="setting-group">
+    <h3 id="set_lang">Language</h3>
+    <select id="langSelect"></select>
+  </div>
+
+  <div class="setting-group">
+    <h3 id="set_contrast">Contrast</h3>
+    <button onclick="setContrast('bw')">Black on White</button>
+    <button onclick="setContrast('wb')">White on Black</button>
+    <button onclick="setContrast('yb')">Yellow on Black</button>
+  </div>
+
+  <div class="setting-group">
+    <h3 id="set_textsize">Text size</h3>
+    <button onclick="resetFont()">Standard</button>
+    <button onclick="setFontPreset('small')">Small</button>
+    <button onclick="setFontPreset('large')">Large</button>
+    <button onclick="setFontPreset('xlarge')">Extra Large</button>
+  </div>
+
+  <button onclick="toggleSettings()" id="settingsBackBtn">← Back</button>
+</div>
+
+<header>
+  <h1 id="siteTitle">Olonganes</h1>
+  <div class="header-right">
+    <input type="search" id="searchBox" />
+    <button id="settingsBtn">⚙ Settings</button>
+  </div>
+</header>
+
+<div class="container">
+  <div id="breadcrumb"></div>
+  <button id="backBtn" onclick="goBack()" style="display:none"></button>
+  <div id="content"></div>
+</div>
+
+<script>
+/* ========= LANG TEXT ========= */
+const UI = {
+  vi: {
+    title: 'Olonganes',
+    home: 'Trang chủ',
+    introTitle: 'Giới thiệu',
+    back: '← Quay lại',
+    searchPlaceholder: 'Tìm trang thông tin...',
+    searchResult: 'Kết quả',
+    noResult: 'Không có kết quả.',
+    loading: 'Đang tải...',
+    noFile: 'Chưa có nội dung file.',
+    settings: 'Settings',
+    language: 'Ngôn ngữ',
+    contrast: 'Contrast',
+    textsize: 'Text size'
+  },
+  en: {
+    title: 'Olonganes',
+    home: 'Home',
+    introTitle: 'Introduction',
+    back: '← Back',
+    searchPlaceholder: 'Search pages...',
+    searchResult: 'Results',
+    noResult: 'No results.',
+    loading: 'Loading...',
+    noFile: 'No file content.',
+    settings: 'Settings',
+    language: 'Language',
+    contrast: 'Contrast',
+    textsize: 'Text size'
+  }
+};
+
+let lang = 'vi';
+
+/* ========= DATA ========= */
+const data = {
+  intro: {
+    vi: 'Olonganes là một quốc gia tưởng tượng với lịch sử, văn hóa và hệ thống riêng.',
+    en: 'Olonganes is a fictional country with its own history, culture, and systems.'
+  },
+  fields: [
+    {
+      name: { vi: 'Lịch sử', en: 'History' },
+      subs: [
+        { name: { vi: 'Thời kỳ hình thành', en: 'Origins' }, file: 'pages/history_origin.html' },
+        { name: { vi: 'Các cuộc cải cách', en: 'Reforms' }, file: 'pages/history_reform.html' }
+      ]
+    },
+    {
+      name: { vi: 'Chính trị', en: 'Politics' },
+      subs: [
+        { name: { vi: 'Hệ thống', en: 'System' }, file: 'pages/politics_system.html' },
+        { name: { vi: 'Luật cơ bản', en: 'Basic Law' }, file: 'pages/politics_law.html' }
+      ]
+    }
+  ]
+};
+
+/* ========= STATE ========= */
+const content = document.getElementById('content');
+const breadcrumb = document.getElementById('breadcrumb');
+const backBtn = document.getElementById('backBtn');
+const searchBox = document.getElementById('searchBox');
+const langSelect = document.getElementById('langSelect');
+
+const stack = [];
+
+function t(key){ return UI[lang][key]; }
+
+/* ========= LANGUAGE ========= */
+function initLangSelect(){
+  Object.keys(UI).forEach(k=>{
+    const op=document.createElement('option');
+    op.value=k; op.textContent=k.toUpperCase();
+    langSelect.appendChild(op);
+  });
+  langSelect.value = lang;
+}
+
+langSelect.onchange = e => {
+  lang = e.target.value;
+  applyUIText();
+  render();
+};
+
+function applyUIText(){
+  document.getElementById('siteTitle').textContent = t('title');
+  searchBox.placeholder = t('searchPlaceholder');
+  backBtn.textContent = t('back');
+  document.getElementById('set_title').textContent = t('settings');
+  document.getElementById('set_lang').textContent = t('language');
+  document.getElementById('set_contrast').textContent = t('contrast');
+  document.getElementById('set_textsize').textContent = t('textsize');
+}
+
+/* ========= NAV ========= */
+function pushState(view,payload){ stack.push({view,payload}); render(); }
+function goBack(){ if(stack.length>1){ stack.pop(); render(); }}
+function current(){ return stack[stack.length-1]; }
+
+/* ========= RENDER ========= */
+function render(){
+  const s=current();
+  backBtn.style.display = stack.length>1?'inline-block':'none';
+  if(s.view==='home') renderHome();
+  if(s.view==='field') renderField(s.payload);
+  if(s.view==='page') renderPage(s.payload);
+  if(s.view==='search') renderSearch(s.payload);
+}
+
+function renderHome(){
+  breadcrumb.textContent = t('home');
+  content.innerHTML = `<h2>${t('introTitle')}</h2><p>${data.intro[lang]}</p>`;
+  data.fields.forEach((f,i)=>{
+    const d=document.createElement('div');
+    d.className='field';
+    d.textContent=f.name[lang];
+    d.onclick=()=>pushState('field',{i});
+    content.appendChild(d);
+  });
+}
+
+function renderField({i}){
+  const f=data.fields[i];
+  breadcrumb.textContent = `${t('home')} > ${f.name[lang]}`;
+  content.innerHTML = `<h2>${f.name[lang]}</h2>`;
+  f.subs.forEach((s,j)=>{
+    const d=document.createElement('div');
+    d.className='subfield';
+    d.textContent=s.name[lang];
+    d.onclick=()=>pushState('page',{i,j});
+    content.appendChild(d);
+  });
+}
+
+async function renderPage({i,j}){
+  const f=data.fields[i]; const s=f.subs[j];
+  breadcrumb.textContent = `${t('home')} > ${f.name[lang]} > ${s.name[lang]}`;
+  content.innerHTML = `<h2>${s.name[lang]}</h2><p>${t('loading')}</p>`;
+  try{
+    const r=await fetch(s.file);
+    content.innerHTML = `<h2>${s.name[lang]}</h2>` + await r.text();
+  }catch{
+    content.innerHTML = `<h2>${s.name[lang]}</h2><p>${t('noFile')}</p>`;
+  }
+}
+
+/* ========= SEARCH ========= */
+function buildIndex(){
+  const L=[];
+  data.fields.forEach((f,i)=>{
+    f.subs.forEach((s,j)=>{
+      L.push({i,j,label:()=>`${s.name[lang]} (${f.name[lang]})`});
+    });
+  });
+  return L;
+}
+
+function renderSearch(q){
+  breadcrumb.textContent = q;
+  content.innerHTML = `<h2>${t('searchResult')}</h2>`;
+  const ql=q.toLowerCase();
+  const results = buildIndex().filter(x=>x.label().toLowerCase().includes(ql));
+  if(!results.length){ content.innerHTML+=`<p>${t('noResult')}</p>`; return; }
+  results.forEach(r=>{
+    const d=document.createElement('div');
+    d.className='subfield';
+    d.textContent=r.label();
+    d.onclick=()=>pushState('page',{i:r.i,j:r.j});
+    content.appendChild(d);
+  });
+}
+
+searchBox.oninput=e=>{
+  const q=e.target.value.trim();
+  if(!q) return render();
+  pushState('search',q);
+};
+
+/* ========= SETTINGS ========= */
+const panel=document.getElementById('settingsPanel');
+function toggleSettings(){ panel.classList.toggle('open'); }
+  document.getElementById('settingsBtn').onclick = toggleSettings;
+
+function setContrast(m){
+  if(m==='bw'){set('white','black');}
+  if(m==='wb'){set('black','white');}
+  if(m==='yb'){set('black','yellow');}
+}
+function set(bg,tx){
+  document.documentElement.style.setProperty('--bg',bg);
+  document.documentElement.style.setProperty('--text',tx);
+}
+
+function resetFont(){ document.documentElement.style.setProperty('--font-size','16px'); }
+function setFontPreset(p){
+  resetFont();
+  if(p==='small') change(-4);
+  if(p==='large') change(4);
+  if(p==='xlarge') change(8);
+}
+function change(d){
+  const r=document.documentElement;
+  const c=parseInt(getComputedStyle(r).getPropertyValue('--font-size'));
+  r.style.setProperty('--font-size',(c+d)+'px');
+}
+
+/* ========= INIT ========= */
+initLangSelect();
+applyUIText();
+pushState('home');
+</script>
 </body>
 </html>
